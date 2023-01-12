@@ -1,7 +1,7 @@
 import { User } from '../../models/user/User';
 import { Controller } from '../../types/common';
 
-export const login: Controller = (req, res) => {
+export const login: Controller = async (req, res) => {
   User.findOne({ userID: req.body.userID }).then((user) => {
     if (!user)
       return res

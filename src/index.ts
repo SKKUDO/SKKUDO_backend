@@ -31,17 +31,6 @@ app.use(cookieParser());
 app.use('/uploads', express.static('uploads')); //uploads 폴더 접근
 
 //connect to MongoDB
-mongoose
-  .connect(process.env.MONGO_URI as string, {})
-  .then(() => console.log('몽고디비 연결완료'))
-  .catch((error) => console.log(error));
-
-app.get(
-  '/',
-  (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    res.send('hello');
-  }
-);
 
 //import Routes
 import ClubTypeRouter from './routes/club/ClubType';
@@ -78,6 +67,31 @@ app.use('/budgets/budgets', BudgetRouter);
 app.use('/minutes/minuteTags', MinuteTagRouter);
 app.use('/minutes/minutes', MinuteRouter);
 
-app.listen(8000, () => {
+const database = process.env.NODE_ENV === 'test' ? 'test' : 'main';
+
+mongoose
+  .connect(`${process.env.MONGO_URI}${database}` as string, {})
+  .then(() => console.log('몽고디비 연결완료'))
+  .catch((error) => console.log(error));
+
+app.get(
+  '/',
+  (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    res.send('hello');
+  }
+);
+
+export const server = app.listen(8000, () => {
   console.log('8000번 포트 대기중...');
 });
+
+//test 시에만 주석 풀기
+
+// if (process.env.NODE_ENV === 'test') {
+//   afterAll(() => {
+//     mongoose.disconnect();
+//     server.close();
+//   });
+// }
+
+export default app;
