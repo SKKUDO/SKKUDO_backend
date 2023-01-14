@@ -66,22 +66,20 @@ const clubSchema = new Schema<ClubInterface>({
 
 const Club = model<ClubInterface>('Club', clubSchema);
 
-clubSchema.pre('save', function (next) {
-  if (this.isModified('userColumn')) {
-    console.log('here');
-    Applier.find({ clubId: this._id })
-      .then((data) => {
-        if (data)
-          next(
-            Error(
-              'Applier가 있는 상태에서 클럽의 userColumns를 변경할 수 없습니다.'
-            )
-          );
-        else next();
-      })
-      .catch((error) => next(Error(error)));
-  } else {
-    next();
+clubSchema.pre('save', async function (next) {
+  try {
+    if (this.isModified('userColumn')) {
+      const appliers = await Applier.find({ clubId: this._id });
+      if (appliers.length > 0)
+        next(
+          Error(
+            'Applier가 있는 상태에서 클럽의 userColumns를 변경할 수 없습니다.'
+          )
+        );
+      else next();
+    }
+  } catch (error: any) {
+    next(Error(error.message));
   }
 });
 

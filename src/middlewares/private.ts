@@ -13,7 +13,7 @@ export const canRetrievePrivateToDos: Middleware = async (req, res, next) => {
     validation.todoWrite,
     club.role
   );
-  req.body.private = result;
+  req.body.private = result ? process.env.PRIVATE_CODE : '';
   next();
 };
 
@@ -27,6 +27,6 @@ export const canRetrievePrivateNotices: Middleware = async (req, res, next) => {
     validation.noticeWrite,
     club.role
   );
-  req.body.private = result;
+  req.body.private = result ? process.env.PRIVATE_CODE : '';
   next();
 };

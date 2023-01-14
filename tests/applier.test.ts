@@ -6,6 +6,8 @@ type LoginInfoType = {
   password: string;
 };
 
+const usingClubId: string = '6381914745ab0d6e50600905';
+
 const testClubLoginInfo: LoginInfoType = {
   userID: process.env.TEST_CLUB_ID as string,
   password: process.env.TEST_CLUB_PW as string,
@@ -17,16 +19,16 @@ const testAdminLoginInfo: LoginInfoType = {
 };
 
 const createApplierBody = {
-  clubId: '6381914745ab0d6e50600905',
-  documentQuestions: [
-    '이 동아리에 지원한 계기는 무엇인가요?',
-    '자신이 한 일중 가장 멋있는 일은 무엇인가요?',
-  ],
+  clubId: usingClubId,
+  documentQuestions: [],
   interviewQuestions: ['면접질문1', '면접질문2'],
-  appliedUserColumns: [{ key: '트랙', valueType: 'string' }],
+  appliedUserColumns: [
+    { key: '트랙', valueType: 'string' },
+    { key: '학년', valueType: 'number' },
+  ],
 };
 
-const agent = request.agent(app); //agent를 이용하면 요청을 지속시킬 수 있다.(쿠키 값 유지 가능) !!!
+export const agent = request.agent(app); //agent를 이용하면 요청을 지속시킬 수 있다.(쿠키 값 유지 가능) !!!
 
 describe('POST /auth/login', () => {
   test('login', (done) => {
@@ -42,14 +44,27 @@ describe('GET /appliers', () => {
 
 describe('GET /applies/appliers/byClub/:clubId', () => {
   test('getApplierByClubId', (done) => {
-    agent
-      .get('/applies/appliers/byClub/6336bbad1c469c4e2329427e')
-      .expect(200, done);
+    agent.get(`/applies/appliers/byClub/${usingClubId}`).expect(404, done);
   });
 });
 
 describe('POST /applies/appliers', () => {
   test('createApplier', (done) => {
     agent.post('/applies/appliers').send(createApplierBody).expect(200, done);
+  });
+});
+
+describe('PATCH /applies/appliers', () => {
+  test('updateApplier', (done) => {
+    agent
+      .patch(`/applies/appliers`)
+      .send({ documentQuestions: ['a'] })
+      .expect(200, done);
+  });
+});
+
+describe('DELETE /applies/appliers', () => {
+  test('deleteApplier', (done) => {
+    agent.delete(`/applier/applies/${usingClubId}`).expect(200, done);
   });
 });
