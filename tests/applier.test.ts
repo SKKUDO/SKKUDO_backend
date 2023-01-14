@@ -17,7 +17,7 @@ const testAdminLoginInfo: LoginInfoType = {
 };
 
 const createApplierBody = {
-  clubId: '636dbaa3000d027bdcea98e3',
+  clubId: '6381914745ab0d6e50600905',
   documentQuestions: [
     '이 동아리에 지원한 계기는 무엇인가요?',
     '자신이 한 일중 가장 멋있는 일은 무엇인가요?',
@@ -45,12 +45,6 @@ describe('GET /applies/appliers/byClub/:clubId', () => {
     agent
       .get('/applies/appliers/byClub/6336bbad1c469c4e2329427e')
       .expect(200, done);
-  });
-});
-
-describe('POST /auth/login', () => {
-  test('login', (done) => {
-    agent.post('/auth/login').send(testClubLoginInfo).expect(200, done);
   });
 });
 

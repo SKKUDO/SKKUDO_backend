@@ -67,7 +67,7 @@ app.use('/budgets/budgets', BudgetRouter);
 app.use('/minutes/minuteTags', MinuteTagRouter);
 app.use('/minutes/minutes', MinuteRouter);
 
-const database = process.env.NODE_ENV === 'test' ? 'test' : 'main';
+const database = process.env.NODE_ENV !== 'production' ? 'test' : 'main';
 
 mongoose
   .connect(`${process.env.MONGO_URI}${database}` as string, {})

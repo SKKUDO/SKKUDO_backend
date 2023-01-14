@@ -15,7 +15,7 @@ export const getAllAppliers: Controller = async (req, res) => {
 export const getApplierByClubId: Controller = async (req, res) => {
   try {
     const clubId: string = req.params.clubId;
-    const applier = await Applier.find({ clubId });
+    const applier = await Applier.findOne({ clubId });
     if (!applier) {
       res.status(404).json({
         status: 'fail',
@@ -43,7 +43,7 @@ export const createApplier: Controller = async (req, res) => {
       return;
     }
     const isOccupied = await Applier.find({ clubId: applier.clubId });
-    if (isOccupied) {
+    if (isOccupied.length !== 0) {
       res.status(400).json({
         status: 'fail',
         error: `${applier.clubId} 동아리에 이미 Applier가 있습니다.`,
@@ -79,12 +79,10 @@ export const deleteApplier: Controller = async (req, res) => {
   try {
     const data = await Applier.findOneAndDelete({ clubId: req.params.clubId });
     if (!data) {
-      res
-        .status(404)
-        .json({
-          status: 'fail',
-          error: `${req.params.clubId} 동아리에 속하는 Applier가 없습니다.`,
-        });
+      res.status(404).json({
+        status: 'fail',
+        error: `${req.params.clubId} 동아리에 속하는 Applier가 없습니다.`,
+      });
       return;
     }
     res.status(200).json({ status: 'success', data });
