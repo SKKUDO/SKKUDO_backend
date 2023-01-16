@@ -194,24 +194,21 @@ userSchema.methods.deleteColumn = function (clubId: string, key: string) {
   user.save();
 };
 
-userSchema.statics.findByToken = function (
-  token: any,
-  callback: (err: any, user: UserInterface | null) => void
-) {
-  const user = this;
-  jwt.verify(
-    String(token),
-    String(process.env.SECRET_TOKEN),
-    function (err: any, decoded: any) {
-      user.findOne(
-        { _id: decoded ? decoded.data : undefined, token: token },
-        function (err: any, user: UserInterface | null) {
-          if (err) return callback(err, null);
-          callback(null, user);
-        }
-      );
-    }
-  );
+userSchema.statics.findByToken = async function (token: any) {
+  try {
+    const user = this;
+    const decoded: any = jwt.verify(
+      String(token),
+      String(process.env.SECRET_TOKEN)
+    );
+    const result: UserInterface | null = user.findOne({
+      _id: decoded ? decoded.data : undefined,
+      token: token,
+    });
+    return result;
+  } catch (error) {
+    return error;
+  }
 };
 
 interface UserMethods {
@@ -227,10 +224,7 @@ interface UserMethods {
 }
 
 interface UserModel extends Model<UserInterface, {}, UserMethods> {
-  findByToken(
-    token: string,
-    callback: (err: any, user: UserInterface | null) => void
-  ): void;
+  findByToken(token: string): Promise<any>;
 }
 
 const User = model<UserInterface, UserModel>('User', userSchema);
