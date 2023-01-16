@@ -87,11 +87,11 @@ export const server = app.listen(8000, () => {
 
 //test 시에만 주석 풀기
 
-// if (process.env.NODE_ENV === 'test') {
-//   afterAll(() => {
-//     mongoose.disconnect();
-//     server.close();
-//   });
-// }
+if (process.env.NODE_ENV === 'test') {
+  afterAll(() => {
+    mongoose.disconnect();
+    server.close();
+  });
+}
 
 export default app;
