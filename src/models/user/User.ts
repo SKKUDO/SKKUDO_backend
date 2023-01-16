@@ -64,23 +64,18 @@ const userSchema = new Schema<UserInterface>({
 });
 
 //유저 모델 저장 전 시행되는 미들웨어; 비밀번호를 암호화함;
-userSchema.pre('save', function (next) {
-  const user = this;
-  if (user.isModified('password')) {
-    bcrypt
-      .genSalt(parseInt(process.env.SALT_ROUNDS as string))
-      .then((salt: string) => {
-        bcrypt
-          .hash(user.password, salt)
-          .then((hashedPW: string) => {
-            user.password = hashedPW;
-            next();
-          })
-          .catch((error: any) => next(error));
-      })
-      .catch((error: any) => next(error));
-  } else {
+userSchema.pre('save', async function (next) {
+  try {
+    const user = this;
+    if (!user.isModified('password')) return next();
+    const salt: string = await bcrypt.genSalt(
+      parseInt(process.env.SALT_ROUNDS as string)
+    );
+    const hashedPW: string = await bcrypt.hash(user.password, salt);
+    user.password = hashedPW;
     next();
+  } catch (error: any) {
+    next(error);
   }
 });
 
