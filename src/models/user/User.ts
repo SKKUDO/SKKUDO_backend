@@ -79,32 +79,31 @@ userSchema.pre('save', async function (next) {
   }
 });
 
-userSchema.methods.comparePassword = function (
-  plainPassword: string,
-  callback: (err: boolean, isMatch: boolean) => void
-) {
-  bcrypt
-    .compare(plainPassword, this.password)
-    .then((isMatch: boolean) => callback(false, isMatch))
-    .catch(() => callback(true, false));
+userSchema.methods.comparePassword = async function (plainPassword: string) {
+  try {
+    const isMatch: boolean = await bcrypt.compare(plainPassword, this.password);
+    return isMatch;
+  } catch (error: any) {
+    return error;
+  }
 };
 
-userSchema.methods.generateToken = function (
-  callback: (error: any, user: UserInterface | null) => void
-) {
-  const user = this;
-  const token = jwt.sign(
-    {
-      data: user._id.toHexString(),
-      exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24, //24시간 후 토큰 만료됨
-    },
-    process.env.SECRET_TOKEN as string
-  );
-  user.token = token;
-  user
-    .save()
-    .then((user: UserInterface) => callback(null, user))
-    .catch((error: any) => callback(error, null));
+userSchema.methods.generateToken = async function () {
+  try {
+    const user = this;
+    const token = jwt.sign(
+      {
+        data: user._id.toHexString(),
+        exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24, //24시간 후 토큰 만료됨
+      },
+      process.env.SECRET_TOKEN as string
+    );
+    user.token = token;
+    const data: UserInterface = await user.save();
+    return data;
+  } catch (error: any) {
+    return error;
+  }
 };
 
 userSchema.methods.findByClubId = function (
@@ -216,13 +215,8 @@ userSchema.statics.findByToken = function (
 };
 
 interface UserMethods {
-  comparePassword(
-    plainPassword: string,
-    callback: (err: boolean, isMatch: boolean) => any
-  ): void;
-  generateToken(
-    callback: (error: any, user: UserInterface | null) => void
-  ): void;
+  comparePassword(plainPassword: string): Promise<boolean>;
+  generateToken(): Promise<UserInterface>;
   updateClubName(clubId: string, name: string): void;
   updateImage(clubId: string, image: string): void;
   addColumn(clubId: string, column: Column, value: string): void;

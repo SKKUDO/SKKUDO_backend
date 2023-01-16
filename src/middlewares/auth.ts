@@ -5,7 +5,7 @@ import { Method, Role } from '../types/common';
 import { Validation } from '../models/validation/validation';
 import { Validation as ValidationInterface } from '../types/validation';
 
-export const auth: Middleware = (req, res, next) => {
+export const auth: Middleware = async (req, res, next) => {
   const token = req.cookies.x_auth;
   User.findByToken(token, (err, user) => {
     if (err) throw err;
