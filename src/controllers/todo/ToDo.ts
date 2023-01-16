@@ -13,7 +13,7 @@ export const getAllToDos: Controller = async (req, res) => {
 
 export const getToDosByClubId: Controller = async (req, res) => {
   try {
-    const toDos = await ToDo.find({ clubId: req.params.id });
+    const toDos = await ToDo.find({ clubId: req.params.clubId });
     if (req.body.private === process.env.PRIVATE_CODE) {
       res.status(200).json({ status: 'success', data: toDos });
       return;
@@ -81,12 +81,10 @@ export const deleteToDo: Controller = async (req, res) => {
   try {
     const todo = await ToDo.findByIdAndDelete(req.params.id);
     if (!todo) {
-      res
-        .status(404)
-        .json({
-          status: 'fail',
-          error: `${req.params.id}에 해당하는 일정이 없습니다.`,
-        });
+      res.status(404).json({
+        status: 'fail',
+        error: `${req.params.id}에 해당하는 일정이 없습니다.`,
+      });
       return;
     }
     res.status(200).json({ status: 'success', data: todo });
