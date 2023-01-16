@@ -112,40 +112,41 @@ export const authByValidationTable: Middleware = async (req, res, next) => {
 };
 
 export const canUpdateUserCell: Middleware = async (req, res, next) => {
-  const registeredClub: RegisteredClub = req.body.registeredClubInfo;
-  const updatingRole: Role = req.body.updatingRole;
-  const result = Validation.validateUser(updatingRole, registeredClub.role);
-  const user: UserInterface = req.body.authUser;
-  const userID: string = req.params.id;
-  if (result) {
-    if (user.userID === userID) {
-      res.status(403).json({
+  try {
+    const registeredClub: RegisteredClub = req.body.registeredClubInfo;
+    const updatingRole: Role = req.body.updatingRole;
+    const result = Validation.validateUser(updatingRole, registeredClub.role);
+    const user: UserInterface = req.body.authUser;
+    const userID: string = req.params.id;
+    if (!result)
+      return res.status(403).json({
+        status: 'fail',
+        error: `귀하는 ${registeredClub.role}이므로 ${updatingRole}이상의 권한을 부여할 수 없습니다.`,
+      });
+    if (user.userID === userID)
+      return res.status(403).json({
         status: 'fail',
         error: '자신의 역할을 스스로 수정할 수 없습니다.',
       });
+    const changingUser = await User.findOne({ userID });
+    const changingUserInfo: RegisteredClub = changingUser?.findByClubId(
+      req.params.clubId
+    ) as RegisteredClub;
+    const canChange = Validation.validateUser(
+      changingUserInfo.role,
+      registeredClub.role
+    );
+    if (canChange && changingUserInfo.role !== registeredClub.role) {
+      next();
     } else {
-      const user = await User.findOne({ userID });
-      const changingUserInfo: RegisteredClub = user?.findByClubId(
-        req.params.clubId
-      ) as RegisteredClub;
-      const result = Validation.validateUser(
-        changingUserInfo.role,
-        registeredClub.role
-      );
-      if (result && changingUserInfo.role !== registeredClub.role) {
-        next();
-      } else {
-        res.status(403).json({
-          status: 'fail',
-          error: `귀하는 ${registeredClub.role}이므로 ${changingUserInfo.role}이상의 권한의 유저를 변경할 수 없습니다.`,
-        });
-      }
+      res.status(403).json({
+        status: 'fail',
+        error: `귀하는 ${registeredClub.role}이므로 ${changingUserInfo.role}이상의 권한의 유저를 변경할 수 없습니다.`,
+      });
     }
-  } else
-    res.status(403).json({
-      status: 'fail',
-      error: `귀하는 ${registeredClub.role}이므로 ${updatingRole}이상의 권한을 부여할 수 없습니다.`,
-    });
+  } catch (error: any) {
+    res.status(400).json({ status: 'fail', error: error.message });
+  }
 };
 
 export const canDeregisterUser: Middleware = async (req, res, next) => {
