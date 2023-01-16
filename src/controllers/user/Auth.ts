@@ -26,19 +26,19 @@ export const login: Controller = async (req, res) => {
   }
 };
 
-export const logout: Controller = (req, res) => {
-  User.findOneAndUpdate(
-    { userID: req.cookies.x_auth },
-    { token: '' },
-    (err: any) => {
-      if (err)
-        return res.status(500).json({ status: 'fail', error: err.message });
-      return res
-        .status(200)
-        .cookie('x_auth', '', { maxAge: 0 })
-        .json({ status: 'success', data: 'logged out' });
-    }
-  );
+export const logout: Controller = async (req, res) => {
+  try {
+    const user = await User.findOneAndUpdate(
+      { userID: req.cookies.x_auth },
+      { token: '' }
+    );
+    return res
+      .status(200)
+      .cookie('x_auth', '', { maxAge: 0 })
+      .json({ status: 'success', data: user });
+  } catch (error: any) {
+    res.status(500).json({ status: 'fail', error: error.message });
+  }
 };
 
 export const verify: Controller = (req, res) => {
