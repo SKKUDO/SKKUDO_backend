@@ -22,11 +22,11 @@ export const login: Controller = (req, res) => {
                 .json({ status: 'fail', error: err.message });
             if (user) {
               res
+                .status(200)
+                .json({ status: 'success', data: user })
                 .cookie('x_auth', user.token, {
                   maxAge: 60 * 60 * 60 * 24,
-                })
-                .status(200)
-                .json({ status: 'success', data: user });
+                });
             }
           });
         }
