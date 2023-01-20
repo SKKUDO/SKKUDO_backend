@@ -23,7 +23,6 @@ const corsOption = {
       ? 'https://www.skkudo.link'
       : 'http://localhost:3000',
   credentials: true,
-  httpOnly: false,
 };
 
 app.use(cors(corsOption));
