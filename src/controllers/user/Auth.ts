@@ -18,6 +18,7 @@ export const login: Controller = async (req, res) => {
     res
       .cookie('x_auth', user.token, {
         maxAge: 60 * 60 * 60 * 24,
+        path: '/',
       })
       .status(200)
       .json({ status: 'success', data: user });

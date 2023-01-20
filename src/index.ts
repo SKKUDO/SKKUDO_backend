@@ -23,6 +23,7 @@ const corsOption = {
       ? 'https://www.skkudo.link'
       : 'http://localhost:3000',
   credentials: true,
+  httpOnly: false,
 };
 
 app.use(cors(corsOption));
@@ -67,7 +68,7 @@ app.use('/budgets/budgets', BudgetRouter);
 app.use('/minutes/minuteTags', MinuteTagRouter);
 app.use('/minutes/minutes', MinuteRouter);
 
-const database = process.env.NODE_ENV !== 'production' ? 'test' : 'main';
+const database = process.env.NODE_ENV !== 'production' ? 'main' : 'main';
 
 mongoose
   .connect(`${process.env.MONGO_URI}${database}` as string, {})
@@ -87,11 +88,11 @@ export const server = app.listen(8000, () => {
 
 //test 시에만 주석 풀기
 
-if (process.env.NODE_ENV === 'test') {
-  afterAll(() => {
-    mongoose.disconnect();
-    server.close();
-  });
-}
+// if (process.env.NODE_ENV === 'test') {
+//   afterAll(() => {
+//     mongoose.disconnect();
+//     server.close();
+//   });
+// }
 
 export default app;
