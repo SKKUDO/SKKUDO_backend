@@ -61,32 +61,33 @@ const appliedUserSchema = new Schema<AppliedUserInterface>({
   updatedAt: Date,
 });
 
-appliedUserSchema.pre('save', function (next) {
-  const { clubId } = this;
-  Applier.findOne({ clubId })
-    .then((applier: ApplierInterface | null) => {
-      if (!applier) next(Error('지원한 유저에 상응하는 Applier가 없습니다.'));
-      else {
-        let fail = false;
-        let usingCol: string = '';
-        applier.appliedUserColumns.forEach((column) => {
-          let found = 0;
-          this.moreColumns.forEach((col) => {
-            if (col.column.key === column.key) {
-              found = 1;
-            }
-          });
-          if (!found) {
-            fail = true;
-            usingCol = column.key;
-          }
-        });
-        if (fail)
-          next(Error(`moreColumns: ${usingCol}에 상응하는 값이 없습니다.`));
-        else next();
+appliedUserSchema.pre('save', async function (next) {
+  try {
+    const { clubId } = this;
+    const applier: ApplierInterface | null = await Applier.findOne({ clubId });
+    if (!applier) {
+      next(Error('지원한 유저에 상응하는 Applier가 없습니다.'));
+      return;
+    }
+    let fail = false;
+    let usingCol: string = '';
+    applier.appliedUserColumns.forEach((column) => {
+      let found = 0;
+      this.moreColumns.forEach((col) => {
+        if (col.column.key === column.key) {
+          found = 1;
+        }
+      });
+      if (!found) {
+        fail = true;
+        usingCol = column.key;
       }
-    })
-    .catch((err) => next(err));
+    });
+    if (fail) next(Error(`moreColumns: ${usingCol}에 상응하는 값이 없습니다.`));
+    else next();
+  } catch (error: any) {
+    next(error);
+  }
 });
 
 const AppliedUser = model<AppliedUserInterface>(

@@ -64,52 +64,46 @@ const userSchema = new Schema<UserInterface>({
 });
 
 //유저 모델 저장 전 시행되는 미들웨어; 비밀번호를 암호화함;
-userSchema.pre('save', function (next) {
-  const user = this;
-  if (user.isModified('password')) {
-    bcrypt
-      .genSalt(parseInt(process.env.SALT_ROUNDS as string))
-      .then((salt: string) => {
-        bcrypt
-          .hash(user.password, salt)
-          .then((hashedPW: string) => {
-            user.password = hashedPW;
-            next();
-          })
-          .catch((error: any) => next(error));
-      })
-      .catch((error: any) => next(error));
-  } else {
+userSchema.pre('save', async function (next) {
+  try {
+    const user = this;
+    if (!user.isModified('password')) return next();
+    const salt: string = await bcrypt.genSalt(
+      parseInt(process.env.SALT_ROUNDS as string)
+    );
+    const hashedPW: string = await bcrypt.hash(user.password, salt);
+    user.password = hashedPW;
     next();
+  } catch (error: any) {
+    next(error);
   }
 });
 
-userSchema.methods.comparePassword = function (
-  plainPassword: string,
-  callback: (err: boolean, isMatch: boolean) => void
-) {
-  bcrypt
-    .compare(plainPassword, this.password)
-    .then((isMatch: boolean) => callback(false, isMatch))
-    .catch(() => callback(true, false));
+userSchema.methods.comparePassword = async function (plainPassword: string) {
+  try {
+    const isMatch: boolean = await bcrypt.compare(plainPassword, this.password);
+    return isMatch;
+  } catch (error: any) {
+    return error;
+  }
 };
 
-userSchema.methods.generateToken = function (
-  callback: (error: any, user: UserInterface | null) => void
-) {
-  const user = this;
-  const token = jwt.sign(
-    {
-      data: user._id.toHexString(),
-      exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24, //24시간 후 토큰 만료됨
-    },
-    process.env.SECRET_TOKEN as string
-  );
-  user.token = token;
-  user
-    .save()
-    .then((user: UserInterface) => callback(null, user))
-    .catch((error: any) => callback(error, null));
+userSchema.methods.generateToken = async function () {
+  try {
+    const user = this;
+    const token = jwt.sign(
+      {
+        data: user._id.toHexString(),
+        exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24, //24시간 후 토큰 만료됨
+      },
+      process.env.SECRET_TOKEN as string
+    );
+    user.token = token;
+    const data: UserInterface = await user.save();
+    return data;
+  } catch (error: any) {
+    return error;
+  }
 };
 
 userSchema.methods.findByClubId = function (
@@ -200,34 +194,26 @@ userSchema.methods.deleteColumn = function (clubId: string, key: string) {
   user.save();
 };
 
-userSchema.statics.findByToken = function (
-  token: any,
-  callback: (err: any, user: UserInterface | null) => void
-) {
-  const user = this;
-  jwt.verify(
-    String(token),
-    String(process.env.SECRET_TOKEN),
-    function (err: any, decoded: any) {
-      user.findOne(
-        { _id: decoded ? decoded.data : undefined, token: token },
-        function (err: any, user: UserInterface | null) {
-          if (err) return callback(err, null);
-          callback(null, user);
-        }
-      );
-    }
-  );
+userSchema.statics.findByToken = async function (token: any) {
+  try {
+    const user = this;
+    const decoded: any = jwt.verify(
+      String(token),
+      String(process.env.SECRET_TOKEN)
+    );
+    const result: UserInterface | null = user.findOne({
+      _id: decoded ? decoded.data : undefined,
+      token: token,
+    });
+    return result;
+  } catch (error) {
+    return error;
+  }
 };
 
 interface UserMethods {
-  comparePassword(
-    plainPassword: string,
-    callback: (err: boolean, isMatch: boolean) => any
-  ): void;
-  generateToken(
-    callback: (error: any, user: UserInterface | null) => void
-  ): void;
+  comparePassword(plainPassword: string): Promise<boolean>;
+  generateToken(): Promise<UserInterface>;
   updateClubName(clubId: string, name: string): void;
   updateImage(clubId: string, image: string): void;
   addColumn(clubId: string, column: Column, value: string): void;
@@ -238,10 +224,7 @@ interface UserMethods {
 }
 
 interface UserModel extends Model<UserInterface, {}, UserMethods> {
-  findByToken(
-    token: string,
-    callback: (err: any, user: UserInterface | null) => void
-  ): void;
+  findByToken(token: string): Promise<any>;
 }
 
 const User = model<UserInterface, UserModel>('User', userSchema);

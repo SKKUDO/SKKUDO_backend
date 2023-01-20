@@ -5,25 +5,27 @@ import { Method, Role } from '../types/common';
 import { Validation } from '../models/validation/validation';
 import { Validation as ValidationInterface } from '../types/validation';
 
-export const auth: Middleware = (req, res, next) => {
-  const token = req.cookies.x_auth;
-  User.findByToken(token, (err, user) => {
-    if (err) throw err;
+export const auth: Middleware = async (req, res, next) => {
+  try {
+    const token = req.cookies.x_auth;
+    const user = await User.findByToken(token);
     if (!user)
       return res
-        .status(404)
-        .json({ status: 'fail', error: '인증 정보가 없습니다' });
+        .status(401)
+        .json({ status: 'fail', error: '인증 정보가 없습니다.' });
     req.body.authToken = token;
     req.body.authUser = user;
     next();
-  });
+  } catch (error: any) {
+    res.status(500).json({ status: 'fail', error: error.message });
+  }
 };
 
-export const authByClub: Middleware = (req, res, next) => {
-  const token = req.cookies.x_auth;
-  const clubId = req.params.clubId;
-  User.findByToken(token, (err, user) => {
-    if (err) throw err;
+export const authByClub: Middleware = async (req, res, next) => {
+  try {
+    const token = req.cookies.x_auth;
+    const clubId = req.params.clubId;
+    const user = await User.findByToken(token);
     if (!user)
       return res
         .status(401)
@@ -36,7 +38,9 @@ export const authByClub: Middleware = (req, res, next) => {
         error: '인증 정보가 해당 동아리에 속하지 않습니다.',
       });
     }
-  });
+  } catch (error: any) {
+    res.status(500).json({ status: 'fail', error: error.message });
+  }
 };
 
 //auth 미들웨어를 통과한 이후 시행해야함
@@ -52,111 +56,97 @@ export const authBySuperUser: Middleware = (req, res, next) => {
 };
 
 export const authByValidationTable: Middleware = async (req, res, next) => {
-  const method: Method = req.method as Method;
-  const originalUrl = req.originalUrl;
-  const token = req.cookies.x_auth;
-  const clubId: string = req.params.clubId
-    ? req.params.clubId
-    : req.body.clubId;
-  if (!clubId) {
-    res
-      .status(500)
-      .json({ status: 'fail', error: 'clubId를 params또는 body에 보내주세요' });
-    return;
-  }
-  const validation: ValidationInterface | null = await Validation.findOne({
-    clubId,
-  });
-  if (!validation) {
-    res.status(401).json({
-      status: 'fail',
-      error: '해당 동아리는 인증 테이블을 가지고 있지 않습니다.',
+  try {
+    const method: Method = req.method as Method;
+    const originalUrl = req.originalUrl;
+    const token = req.cookies.x_auth;
+    const clubId: string = req.params.clubId
+      ? req.params.clubId
+      : req.body.clubId;
+    if (!clubId) {
+      res.status(500).json({
+        status: 'fail',
+        error: 'clubId를 params또는 body에 보내주세요',
+      });
+      return;
+    }
+    const validation: ValidationInterface | null = await Validation.findOne({
+      clubId,
     });
-    return;
-  } else {
+    if (!validation) {
+      res.status(401).json({
+        status: 'fail',
+        error: '해당 동아리는 인증 테이블을 가지고 있지 않습니다.',
+      });
+      return;
+    }
     const validator: Role = await Validation.findValidator(
       validation,
       method,
       originalUrl
     );
-    User.findByToken(token, (err, user) => {
-      if (err) throw Error(err);
-      req.body.authUser = user;
-      if (process.env.SUPER_USERS?.includes(user ? user.userID : '')) {
-        next();
-        return;
-      }
-      User.findOne({ userID: user?.userID })
-        .then((user) => {
-          if (!user) {
-            res
-              .status(404)
-              .json({ status: 'fail', error: '인증 정보가 없습니다.' });
-          } else {
-            const registeredClub: RegisteredClub | null =
-              user.findByClubId(clubId);
-            if (!registeredClub)
-              return res.status(403).json({
-                status: 'fail',
-                error: '동아리에 가입되어있지 않습니다.',
-              });
-            else {
-              req.body.registeredClubInfo = registeredClub;
-              const result = Validation.validateUser(
-                validator,
-                registeredClub.role
-              );
-              if (result) next();
-              else
-                res.status(403).json({
-                  status: 'fail',
-                  error: `${validator}이상의 권한이 필요합니다.`,
-                });
-            }
-          }
-        })
-        .catch((error) =>
-          res.status(500).json({ status: 'fail', error: error.message })
-        );
-    });
+    const user = await User.findByToken(token);
+    if (!user)
+      return res
+        .status(401)
+        .json({ status: 'fail', error: '인증 정보가 없습니다.' });
+    req.body.authUser = user;
+    if (process.env.SUPER_USERS?.includes(user ? user.userID : ''))
+      return next();
+    const registeredClub: RegisteredClub | null = user.findByClubId(clubId);
+    if (!registeredClub)
+      return res
+        .status(403)
+        .json({ status: 'fail', error: '동아리에 가입되어있지 않습니다.' });
+    req.body.registeredClubInfo = registeredClub;
+    const result = Validation.validateUser(validator, registeredClub.role);
+    if (result) next();
+    else
+      res.status(403).json({
+        status: 'fail',
+        error: `${validator}이상의 권한이 필요합니다.`,
+      });
+  } catch (error: any) {
+    res.status(500).json({ status: 'fail', error: error.message });
   }
 };
 
 export const canUpdateUserCell: Middleware = async (req, res, next) => {
-  const registeredClub: RegisteredClub = req.body.registeredClubInfo;
-  const updatingRole: Role = req.body.updatingRole;
-  const result = Validation.validateUser(updatingRole, registeredClub.role);
-  const user: UserInterface = req.body.authUser;
-  const userID: string = req.params.id;
-  if (result) {
-    if (user.userID === userID) {
-      res.status(403).json({
+  try {
+    const registeredClub: RegisteredClub = req.body.registeredClubInfo;
+    const updatingRole: Role = req.body.updatingRole;
+    const result = Validation.validateUser(updatingRole, registeredClub.role);
+    const user: UserInterface = req.body.authUser;
+    const userID: string = req.params.id;
+    if (!result)
+      return res.status(403).json({
+        status: 'fail',
+        error: `귀하는 ${registeredClub.role}이므로 ${updatingRole}이상의 권한을 부여할 수 없습니다.`,
+      });
+    if (user.userID === userID)
+      return res.status(403).json({
         status: 'fail',
         error: '자신의 역할을 스스로 수정할 수 없습니다.',
       });
+    const changingUser = await User.findOne({ userID });
+    const changingUserInfo: RegisteredClub = changingUser?.findByClubId(
+      req.params.clubId
+    ) as RegisteredClub;
+    const canChange = Validation.validateUser(
+      changingUserInfo.role,
+      registeredClub.role
+    );
+    if (canChange && changingUserInfo.role !== registeredClub.role) {
+      next();
     } else {
-      const user = await User.findOne({ userID });
-      const changingUserInfo: RegisteredClub = user?.findByClubId(
-        req.params.clubId
-      ) as RegisteredClub;
-      const result = Validation.validateUser(
-        changingUserInfo.role,
-        registeredClub.role
-      );
-      if (result && changingUserInfo.role !== registeredClub.role) {
-        next();
-      } else {
-        res.status(403).json({
-          status: 'fail',
-          error: `귀하는 ${registeredClub.role}이므로 ${changingUserInfo.role}이상의 권한의 유저를 변경할 수 없습니다.`,
-        });
-      }
+      res.status(403).json({
+        status: 'fail',
+        error: `귀하는 ${registeredClub.role}이므로 ${changingUserInfo.role}이상의 권한의 유저를 변경할 수 없습니다.`,
+      });
     }
-  } else
-    res.status(403).json({
-      status: 'fail',
-      error: `귀하는 ${registeredClub.role}이므로 ${updatingRole}이상의 권한을 부여할 수 없습니다.`,
-    });
+  } catch (error: any) {
+    res.status(400).json({ status: 'fail', error: error.message });
+  }
 };
 
 export const canDeregisterUser: Middleware = async (req, res, next) => {

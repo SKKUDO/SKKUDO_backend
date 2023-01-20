@@ -22,20 +22,21 @@ const noticeTagSchema = new Schema<NoticeTagInterface>({
   },
 });
 
-noticeTagSchema.pre('remove', function (next) {
-  const noticeTag = this;
-  Notice.find({ clubId: noticeTag.clubId })
-    .then((notices: NoticeInterface[]) => {
-      let usingTag: boolean = false;
-      notices.forEach((notice) => {
-        if (notice.noticeTags.indexOf(noticeTag.name) >= 0) {
-          usingTag = true;
-        }
-      });
-      if (usingTag) next(Error('해당 태그를 사용하는 공지가 있습니다.'));
-      else next();
-    })
-    .catch((error) => next(Error(error)));
+noticeTagSchema.pre('remove', async function (next) {
+  try {
+    const noticeTag = this;
+    const notices = await Notice.find({ clubId: noticeTag.clubId });
+    let usingTag: boolean = false;
+    notices.forEach((notice) => {
+      if (notice.noticeTags.indexOf(noticeTag.name) >= 0) {
+        usingTag = true;
+      }
+    });
+    if (usingTag) next(Error('해당 태그를 사용하는 공지가 있습니다.'));
+    else next();
+  } catch (error: any) {
+    next(Error(error));
+  }
 });
 
 const NoticeTag = model<NoticeTagInterface>('NoticeTag', noticeTagSchema);

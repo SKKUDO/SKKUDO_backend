@@ -3,148 +3,113 @@ import { AppliedUser } from '../../models/apply/AppliedUser';
 import { Club } from '../../models/club/Club';
 import { User as UserInterface } from '../../types/user';
 
-export const getAllAppliedUsers: Controller = (req, res) => {
-  AppliedUser.find()
-    .then((appliedUsers) =>
-      res.status(200).json({
-        status: 'success',
-        data: appliedUsers,
-      })
-    )
-    .catch((error) =>
-      res.status(400).json({
-        status: 'fail',
-        error: error.message,
-      })
-    );
-};
-
-export const getAppliedUsersByClubId: Controller = (req, res) => {
-  const clubId: string = req.params.clubId;
-  let users: any[] = [];
-  Club.findById(clubId)
-    .then((club) => {
-      if (!club) {
-        res
-          .status(404)
-          .json({ status: 'fail', error: '존재하지 않는 동아리입니다.' });
-      } else {
-        AppliedUser.find()
-          .then((appliedUser) => {
-            for (let i = 0; i < appliedUser.length; i++) {
-              if (appliedUser[i].clubId.toString() === clubId) {
-                users.push(appliedUser[i]);
-              }
-            }
-            return res.status(200).json({
-              status: 'success',
-              data: users,
-            });
-          })
-          .catch((error) => {
-            return res.status(400).json({
-              status: 'fail',
-              error: error.message,
-            });
-          });
-      }
-    })
-    .catch((error) =>
-      res.status(400).json({
-        status: 'fail',
-        error: error.message,
-      })
-    );
-};
-
-export const getAppliedUsersByUserId: Controller = (req, res) => {
-  const authUser: UserInterface = req.body.authUser;
-  AppliedUser.find({ userID: authUser.userID })
-    .then((data) => res.status(200).json({ status: 'success', data }))
-    .catch((error) => res.status(500).json({ status: 'fail', error }));
-};
-
-export const createAppliedUser: Controller = (req, res) => {
-  const authUser = req.body.authUser;
-  const clubId = req.body.clubId;
-  const result = authUser.findByClubId(clubId);
-  if (result) {
-    res
-      .status(403)
-      .json({ status: 'fail', error: '동아리에 이미 가입되어있습니다.' });
-  } else {
-    req.body.createdAt = new Date();
-    req.body.updatedAt = new Date();
-    const appliedUser = new AppliedUser(req.body);
-    Club.findById(clubId)
-      .then((club) => {
-        if (!club) {
-          return res
-            .status(404)
-            .json({ status: 'fail', error: '존재하지 않는 동아리입니다.' });
-        } else {
-          appliedUser
-            .save()
-            .then((data) => {
-              return res.status(200).json({ status: 'success', data });
-            })
-            .catch((error) => {
-              return res
-                .status(400)
-                .json({ status: 'fail', error: error.message });
-            });
-        }
-      })
-      .catch((error) =>
-        res.status(400).json({
-          status: 'fail',
-          error: error.message,
-        })
-      );
+export const getAllAppliedUsers: Controller = async (req, res) => {
+  try {
+    const users = await AppliedUser.find();
+    res.status(200).json({ status: 'success', data: users });
+  } catch (error: any) {
+    res.status(500).json({ status: 'fail', error: error.message });
   }
 };
 
-export const updateAppliedUser: Controller = (req, res) => {
-  req.body.updatedAt = new Date();
-  const id: string = req.params.id;
-  AppliedUser.findOneAndUpdate({ _id: id }, req.body)
-    .then((data) => {
-      if (!data)
-        return res
-          .status(400)
-          .json({ status: 'fail', error: 'AppliedUser not found' });
-      else {
-        res.status(200).json({
-          status: 'success',
-          data,
-        });
-      }
-    })
-    .catch((error) =>
-      res.status(400).json({
+export const getAppliedUsersByClubId: Controller = async (req, res) => {
+  try {
+    const clubId: string = req.params.clubId;
+    const club = await Club.findById(clubId);
+    if (!club) {
+      res.status(404).json({
         status: 'fail',
-        error: error.message,
-      })
+        error: `${clubId}에 해당하는 동아리가 존재하지 않습니다.`,
+      });
+      return;
+    }
+    let appliedUsers = await AppliedUser.find();
+    appliedUsers = appliedUsers.filter(
+      (user) => user.clubId.toString() === clubId
     );
+    res.status(200).json({ status: 'success', data: appliedUsers });
+  } catch (error: any) {
+    res.status(500).json({ status: 'fail', error: error.message });
+  }
 };
 
-export const deleteAppliedUser: Controller = (req, res) => {
-  AppliedUser.findByIdAndDelete(req.params.id)
-    .then((data) => res.status(200).json({ status: 'success', data }))
-    .catch((error) =>
-      res.status(400).json({ status: 'fail', error: error.message })
-    );
+export const getAppliedUsersByUserId: Controller = async (req, res) => {
+  try {
+    const authUser: UserInterface = req.body.authUser;
+    const appliedUsers = await AppliedUser.find({ userID: authUser.userID });
+    res.status(200).json({ status: 'success', data: appliedUsers });
+  } catch (error: any) {
+    res.status(500).json({ status: 'fail', error: error.message });
+  }
 };
 
-export const deleteAppliedUsersByClubId: Controller = (req, res) => {
-  AppliedUser.deleteMany({ clubId: req.params.clubId })
-    .then((data) =>
-      res.status(200).json({
-        status: 'success',
-        data,
-        message:
-          '만약 지워지지 않은 경우 애초에 지원자가 없거나 clubId가 잘못되었을 수 있습니다.',
-      })
-    )
-    .catch((error) => res.status(500).json({ status: 'fail', error }));
+export const createAppliedUser: Controller = async (req, res) => {
+  try {
+    const authUser = req.body.authUser;
+    const clubId = req.body.clubId;
+    const using = authUser.findByClubId(clubId);
+    if (using) {
+      res
+        .status(403)
+        .json({ status: 'fail', error: '동아리에 이미 가입되어있습니다.' });
+      return;
+    }
+    req.body.createdAt = new Date();
+    req.body.updatedAt = new Date();
+    const appliedUser = new AppliedUser(req.body);
+    await appliedUser.save();
+    res.status(200).json({ status: 'success', data: appliedUser });
+  } catch (error: any) {
+    res.status(400).json({ status: 'fail', error: error.message });
+  }
+};
+
+export const updateAppliedUser: Controller = async (req, res) => {
+  try {
+    req.body.updatedAt = new Date();
+    const id: string = req.params.id;
+    const updatedAppliedUser = await AppliedUser.findOneAndUpdate(
+      { _id: id },
+      req.body
+    );
+    if (!updatedAppliedUser) {
+      res.status(404).json({
+        status: 'fail',
+        error: `${id}에 해당하는 유저가 존재하지 않습니다.`,
+      });
+      return;
+    }
+    res.status(200).json({ status: 'success', data: updatedAppliedUser });
+  } catch (error) {
+    res.status(400).json({ status: 'fail', error });
+  }
+};
+
+export const deleteAppliedUser: Controller = async (req, res) => {
+  try {
+    const appliedUser = await AppliedUser.findByIdAndDelete(req.params.id);
+    if (!appliedUser) {
+      res.status(404).json({
+        status: 'fail',
+        error: `${req.params.id}에 해당하는 유저가 없습니다.`,
+      });
+    }
+    res.status(200).json({ status: 'success', data: appliedUser });
+  } catch (error: any) {
+    res.status(500).json({ status: 'fail', error: error.message });
+  }
+};
+
+export const deleteAppliedUsersByClubId: Controller = async (req, res) => {
+  try {
+    const data = await AppliedUser.deleteMany({ clubId: req.params.clubId });
+    res.status(200).json({
+      status: 'success',
+      data,
+      message:
+        '만약 지워지지 않은 경우 애초에 지원자가 없거나 clubId가 잘못되었을 수 있습니다.',
+    });
+  } catch (error: any) {
+    res.status(500).json({ status: 'fail', error: error.message });
+  }
 };

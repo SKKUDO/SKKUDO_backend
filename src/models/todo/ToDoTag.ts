@@ -17,20 +17,21 @@ const toDoTagSchema = new Schema<ToDoTagInterface>({
   updatedAt: Date,
 });
 
-toDoTagSchema.pre('remove', function (next) {
-  const toDoTag = this;
-  ToDo.find({ clubId: toDoTag.clubId })
-    .then((todos: ToDoInterface[]) => {
-      let usingTag: boolean = false;
-      todos.forEach((todo) => {
-        if (todo.tags.indexOf(toDoTag.name) >= 0) {
-          usingTag = true;
-        }
-      });
-      if (usingTag) next(Error('해당 태그를 사용하고 있는 일정이 있습니다.'));
-      else next();
-    })
-    .catch((error) => next(Error(error)));
+toDoTagSchema.pre('remove', async function (next) {
+  try {
+    const toDoTag = this;
+    const todos: ToDoInterface[] = await ToDo.find({ clubId: toDoTag.clubId });
+    let usingTag: boolean = false;
+    todos.forEach((todo) => {
+      if (todo.tags.indexOf(toDoTag.name) >= 0) {
+        usingTag = true;
+      }
+    });
+    if (usingTag) next(Error('해당 태그를 사용하고 있는 일정이 있습니다.'));
+    else next();
+  } catch (error: any) {
+    next(Error(error));
+  }
 });
 
 const ToDoTag = model<ToDoTagInterface>('ToDoTag', toDoTagSchema);
