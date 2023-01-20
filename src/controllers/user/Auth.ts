@@ -8,6 +8,7 @@ export const login: Controller = async (req, res) => {
       return res
         .status(401)
         .json({ status: 'fail', error: '해당 아이디의 유저가 없습니다.' });
+
     const isMatch: boolean = await user.comparePassword(req.body.password);
     if (String(isMatch) !== 'true')
       return res
