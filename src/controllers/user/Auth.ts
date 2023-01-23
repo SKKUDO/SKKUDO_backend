@@ -21,7 +21,7 @@ export const login: Controller = async (req, res) => {
         maxAge: 60 * 60 * 60 * 24,
         path: '/',
         httpOnly: true,
-        Secure: true,
+        secure: true,
       })
       .status(200)
       .json({ status: 'success', data: user });
