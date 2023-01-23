@@ -17,7 +17,7 @@ export const auth: Middleware = async (req, res, next) => {
     req.body.authUser = user;
     next();
   } catch (error: any) {
-    res.status(500).json({ status: 'fail', error: error.message });
+    res.status(401).json({ status: 'fail', error: '인증 정보가 없습니다.' });
   }
 };
 

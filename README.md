@@ -1,5 +1,3 @@
 # SKKUDO_backend
 
-sudo your campus life
-skkudo_backend
-# SKKUDO_backend_self
+sudo your campus life, SKKUDO에 오신걸 환영합니다.

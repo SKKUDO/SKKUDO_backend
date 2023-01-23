@@ -206,8 +206,8 @@ userSchema.statics.findByToken = async function (token: any) {
       token: token,
     });
     return result;
-  } catch (error) {
-    return error;
+  } catch (error: any) {
+    throw Error(error.message);
   }
 };
 
